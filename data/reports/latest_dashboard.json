@@ -1,0 +1,14 @@
+{
+  "application_count": 4,
+  "dag_name": "retail_analytics_demo",
+  "report_ids": [
+    "spark-demo-943",
+    "spark-demo-420",
+    "spark-demo-017",
+    "spark-demo-151"
+  ],
+  "run_end": 1789908690092,
+  "run_start": 1789907287890,
+  "shs_url": "https://spark-history.demo.invalid",
+  "successful_report_count": 3
+}

@@ -1,0 +1,52 @@
+{
+  "rules_version": "1",
+  "cpu": {
+    "low_efficiency_warning_pct": 40,
+    "low_efficiency_critical_pct": 20
+  },
+  "utilization": {
+    "low_slot_warning_pct": 60,
+    "low_slot_critical_pct": 30,
+    "min_duration_for_critical_ms": 300000,
+    "wasted_core_seconds_critical": 3600
+  },
+  "parallelism": {
+    "peak_slot_ratio_warning": 0.5,
+    "peak_slot_ratio_critical": 0.25
+  },
+  "memory": {
+    "gc_warning_pct": 10,
+    "gc_critical_pct": 20,
+    "spill_warning_bytes": 1073741824,
+    "spill_critical_bytes": 10737418240
+  },
+  "skew": {
+    "min_tasks": 20,
+    "p95_median_warning": 3,
+    "p95_median_critical": 5,
+    "max_median_critical": 10,
+    "skewed_task_multiplier": 3
+  },
+  "join": {
+    "amplification_warning": 3,
+    "amplification_critical": 10
+  },
+  "shuffle": {
+    "fetch_wait_warning_pct": 10,
+    "fetch_wait_critical_pct": 25,
+    "io_to_input_warning_ratio": 3,
+    "io_to_input_critical_ratio": 10
+  },
+  "scan": {
+    "large_scan_bytes": 107374182400
+  },
+  "window": {
+    "heavy_window_rows": 100000000,
+    "heavy_window_shuffle_bytes": 107374182400
+  },
+  "sql_operators": {
+    "heavy_sort_rows": 100000000,
+    "row_amplification_warning": 3,
+    "row_amplification_critical": 10
+  }
+}

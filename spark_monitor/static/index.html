@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spark Monitor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&amp;family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="appbar">
+    <a class="brand" href="/" aria-label="Spark Monitor">
+      <img class="brand-logo" src="/spark-logo-rev.svg" alt="Apache Spark">
+      <strong>Monitor</strong>
+    </a>
+    <div class="appbar-meta">
+      <a class="appbar-link" href="/help.html">Справка по метрикам</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="control-panel">
+      <form id="analyze-form" autocomplete="off">
+        <div class="form-label-row">
+          <label for="dag-name">DAG</label>
+          <span class="form-hint" title="Будет выбран последний запуск и обработаны все приложения &lt;dag_name&gt;__&lt;task_name&gt;. После успешного расчёта предыдущий DAG и его данные будут заменены.">ⓘ Последний запуск · данные DAG заменяются</span>
+        </div>
+        <div class="search-control">
+          <input id="dag-name" name="dag_name" value="retail_analytics_demo" placeholder="Введите dag_name" spellcheck="false" required>
+          <button id="analyze-button" type="submit"><span>Посчитать метрики</span></button>
+        </div>
+      </form>
+      <div id="job-panel" class="job-panel" hidden>
+        <div class="job-line"><strong id="job-message">Поиск приложений…</strong><span id="job-counter">0 / 0</span></div>
+        <div class="progress-track"><span id="job-progress"></span></div>
+        <div id="job-errors" class="job-errors"></div>
+      </div>
+    </section>
+
+    <section class="run-strip" id="run-strip">
+      <div><span>DAG</span><strong id="run-dag">retail_analytics_demo</strong></div>
+      <div><span>Запуск</span><strong id="run-window">—</strong></div>
+      <div><span>Приложения</span><strong id="app-count">—</strong></div>
+      <div><span>Требуют внимания</span><strong id="problem-count">—</strong></div>
+      <div class="legend" id="status-summary"><i class="dot critical"></i>Critical <i class="dot warning"></i>Warning <i class="dot ok"></i>OK</div>
+    </section>
+
+    <section class="matrix-card">
+      <div class="matrix-head">
+        <div><strong>Приложения и TOP-7 проблем</strong></div>
+        <span id="visible-count">0 строк</span>
+      </div>
+      <div class="table-scroll">
+        <table class="app-table">
+          <thead>
+            <tr>
+              <th class="sticky app-column">Приложение</th>
+              <th><b>1</b> Compute</th>
+              <th><b>2</b> Memory</th>
+              <th><b>3</b> Skew</th>
+              <th><b>4</b> Shuffle</th>
+              <th><b>5</b> Scan</th>
+              <th><b>6</b> Join</th>
+              <th><b>7</b> SQL operators</th>
+            </tr>
+          </thead>
+          <tbody id="app-rows">
+            <tr><td colspan="8" class="empty">Загрузка отчёта…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+  <script src="/app.js" defer></script>
+</body>
+</html>

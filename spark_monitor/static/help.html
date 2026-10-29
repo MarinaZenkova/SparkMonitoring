@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Справка по метрикам · Spark Monitor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&amp;family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/help.css">
+  <script src="/help.js" defer></script>
+</head>
+<body class="docs-page">
+  <header class="appbar">
+    <a class="brand" href="/" aria-label="Spark Monitor">
+      <img class="brand-logo" src="/spark-logo-rev.svg" alt="Apache Spark">
+      <strong>Monitor</strong>
+    </a>
+    <div class="appbar-meta">
+      <a class="appbar-link" href="/">← К дашборду</a>
+    </div>
+  </header>
+
+  <main class="docs-main">
+    <section class="docs-intro">
+      <div>
+        <span class="eyebrow">Справка</span>
+        <h1>Как читать Spark Monitor</h1>
+        <p>Страница повторяет порядок дашборда: сначала строка приложения, затем параметры запуска и семь диагностик. Пороговые значения подставляются из той же конфигурации, которую использует парсер.</p>
+      </div>
+      <div class="rules-source">
+        <span>Активные правила</span>
+        <strong id="rules-source-value">Загрузка…</strong>
+        <small id="rules-load-state">Получаем текущие границы с backend</small>
+      </div>
+    </section>
+
+    <nav class="docs-nav" aria-label="Разделы справки">
+      <a href="#anatomy">Структура</a>
+      <a href="#run-setup">Run setup</a>
+      <a href="#statuses">Статусы</a>
+      <a href="#compute">1 Compute</a>
+      <a href="#memory">2 Memory</a>
+      <a href="#skew">3 Skew</a>
+      <a href="#shuffle">4 Shuffle</a>
+      <a href="#scan">5 Scan</a>
+      <a href="#joins">6 Join</a>
+      <a href="#sql-operators">7 SQL operators</a>
+    </nav>
+
+    <section class="doc-section" id="anatomy">
+      <header class="section-heading">
+        <div><span class="section-index">01</span><h2>Строка приложения</h2></div>
+        <p>Одна строка — одно Spark-приложение выбранного запуска DAG. Цвет показывает итог диагностики, а две строки текста дают основной сигнал без раскрытия.</p>
+      </header>
+      <div class="structure-scroll">
+        <div class="dashboard-map">
+          <div class="map-head app-map-head">Приложение</div>
+          <a class="map-head" href="#compute"><b>1</b> Compute</a>
+          <a class="map-head" href="#memory"><b>2</b> Memory</a>
+          <a class="map-head" href="#skew"><b>3</b> Skew</a>
+          <a class="map-head" href="#shuffle"><b>4</b> Shuffle</a>
+          <a class="map-head" href="#scan"><b>5</b> Scan</a>
+          <a class="map-head" href="#joins"><b>6</b> Join</a>
+          <a class="map-head" href="#sql-operators"><b>7</b> SQL operators</a>
+
+          <div class="map-cell app-map-cell">
+            <strong><i class="sample-state"></i>00_ingest_order_events</strong>
+            <small>18.09, 19:18 · 39с · SUCCEEDED</small>
+            <p>Имя task, начало, полное время приложения и полнота Event Log.</p>
+          </div>
+          <div class="map-cell"><span class="sample-status warning">WARN</span><strong>6,9% CPU used</strong><small>14,1% slots used</small><p>Загрузка выделенных CPU и task slots.</p></div>
+          <div class="map-cell"><span class="sample-status ok">OK</span><strong>2,4% GC</strong><small>0 B spill</small><p>Паузы JVM и выгрузка данных из памяти.</p></div>
+          <div class="map-cell"><span class="sample-status ok">OK</span><strong>1,3× duration</strong><small>2,4× input</small><p>Неравномерность задач худшего stage.</p></div>
+          <div class="map-cell"><span class="sample-status ok">OK</span><strong>62,8 MiB I/O</strong><small>0% fetch wait</small><p>Объём shuffle и ожидание блоков.</p></div>
+          <div class="map-cell"><span class="sample-status ok">OK</span><strong>99,1% pruned</strong><small>30 files selected</small><p>Подтверждённое исключение файлов.</p></div>
+          <div class="map-cell"><span class="sample-status na">N/A</span><strong>No joins</strong><small>Plan checked</small><p>Стратегии join и рост числа строк.</p></div>
+          <div class="map-cell"><span class="sample-status ok">OK</span><strong>1 Exchange</strong><small>319,9 MiB max</small><p>Window, Sort, Exchange и Expand.</p></div>
+        </div>
+      </div>
+      <div class="application-notes">
+        <div><strong>Имя приложения</strong><span>Отображается часть после <code>&lt;dag_name&gt;__</code>, то есть имя Airflow task.</span></div>
+        <div><strong>Время</strong><span>Duration = Application End − Application Start. Это wall-clock время, а не сумма времени задач.</span></div>
+        <div><strong>SUCCEEDED / FAILED</strong><span>Фактический результат Spark-приложения. Красный кружок всегда сопровождается текстом FAILED.</span></div>
+        <div><strong>PARTIAL LOG</strong><span>Показывается только для неполного Event Log: часть метрик в таком отчёте может быть недоступна.</span></div>
+      </div>
+    </section>
+
+    <section class="doc-section" id="run-setup">
+      <header class="section-heading">
+        <div><span class="section-index">02</span><h2>Run setup и контекст расчёта</h2></div>
+        <p>Эта линия объясняет, с какими ресурсами и SQL-настройками реально работало приложение. Она не является восьмой диагностикой.</p>
+      </header>
+      <div class="setup-map">
+        <div class="setup-title"><strong>Run setup</strong><span>configuration</span></div>
+        <div><span>Driver</span><strong>cores · memory · overhead</strong><p>Ресурсы процесса driver из Spark properties.</p></div>
+        <div><span>Per executor</span><strong>cores · memory · overhead</strong><p>Ресурсы, заданные на один executor.</p></div>
+        <div><span>Executor count</span><strong>configured ↔ actual</strong><p>Слева min / initial / max из dynamic allocation; справа наблюдавшиеся min / avg / peak.</p></div>
+        <div><span>Spark SQL</span><strong>AQE · skew · shuffle · broadcast</strong><p>Ключевые SQL-флаги и пороги текущего приложения.</p></div>
+        <div><span>Longest stage</span><strong>stage · time · share</strong><p>Stage с наибольшим wall duration и его доля во времени приложения.</p></div>
+        <div><span>Coverage</span><strong>available / total</strong><p>Сколько обязательных источников доказательств присутствует в логе.</p></div>
+      </div>
+
+      <div class="context-docs">
+        <article>
+          <h3>Configured и actual executors</h3>
+          <dl class="metric-defs compact">
+            <div><dt>Configured min / initial / max</dt><dd><code>spark.dynamicAllocation.minExecutors</code>, <code>initialExecutors</code> и <code>maxExecutors</code>.</dd></div>
+            <div><dt>Actual min / avg / peak</dt><dd>Минимум, средневзвешенное по времени и максимум одновременно живых executors по событиям add/remove.</dd></div>
+          </dl>
+        </article>
+        <article>
+          <h3>Longest stage</h3>
+          <dl class="metric-defs compact">
+            <div><dt>Wall duration</dt><dd>Submission Time → Completion Time stage, без суммирования параллельных tasks.</dd></div>
+            <div><dt>Share of app</dt><dd>Wall duration stage / duration приложения × 100.</dd></div>
+            <div><dt>Main signal</dt><dd>Первый диагностический флаг, в evidence которого входит этот stage.</dd></div>
+          </dl>
+        </article>
+        <article>
+          <h3>Coverage: девять проверок данных</h3>
+          <ul class="coverage-list">
+            <li><b>Task metrics</b> — есть executor run time.</li>
+            <li><b>Executor CPU time</b> — есть CPU nanoseconds задач.</li>
+            <li><b>SQL events / plan / metrics</b> — доступны события SQL, physical plan и accumulator metrics.</li>
+            <li><b>AQE events</b> — есть adaptive plan updates.</li>
+            <li><b>Executor memory metrics</b> — есть executor-level memory updates.</li>
+            <li><b>Application completed / log complete</b> — зафиксирован конец приложения и лог не оборван.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="doc-section" id="statuses">
+      <header class="section-heading">
+        <div><span class="section-index">03</span><h2>Статусы и выбор итогового флага</h2></div>
+        <p>Для каждой из семи областей парсер проверяет все правила. В строку приложения поднимается самый серьёзный найденный статус.</p>
+      </header>
+      <div class="status-grid">
+        <div class="status-explainer critical"><strong>CRIT</strong><span>Есть критическое нарушение границы или высокий подтверждённый риск.</span></div>
+        <div class="status-explainer warning"><strong>WARN</strong><span>Есть отклонение или потенциальная оптимизация, требующая проверки.</span></div>
+        <div class="status-explainer ok"><strong>OK</strong><span>Данных достаточно; ни одно правило области не сработало.</span></div>
+        <div class="status-explainer unknown"><strong>UNKNOWN</strong><span>Проверка применима, но в Event Log недостаточно прямых доказательств.</span></div>
+        <div class="status-explainer na"><strong>N/A</strong><span>Проверка неприменима: например, в physical plan нет join или scan.</span></div>
+      </div>
+      <p class="logic-note"><strong>Порядок серьёзности:</strong> CRITICAL → WARNING → OK. NOT_AVAILABLE и NOT_APPLICABLE не превращаются в проблему и не заменяются предположениями. Количество Critical / Warning в верхней панели — число приложений по их худшему статусу, а не число отдельных флагов.</p>
+    </section>
+
+    <section class="diagnostic-doc" id="compute">
+      <header><span class="diagnostic-number">1</span><div><h2>Compute / resources</h2><p>Отвечает на вопрос: эффективно ли приложение использовало выделенные CPU и достаточно ли в нём параллельной работы.</p></div></header>
+      <div class="rule-band">
+        <b>Активные границы</b>
+        <span>CPU efficiency: WARN ≤ <strong data-rule="cpu.low_efficiency_warning_pct" data-format="pct">—</strong>, CRIT ≤ <strong data-rule="cpu.low_efficiency_critical_pct" data-format="pct">—</strong></span>
+        <span>Slot utilization: WARN ≤ <strong data-rule="utilization.low_slot_warning_pct" data-format="pct">—</strong>, CRIT ≤ <strong data-rule="utilization.low_slot_critical_pct" data-format="pct">—</strong></span>
+        <span>Peak slots ratio: WARN ≤ <strong data-rule="parallelism.peak_slot_ratio_warning" data-format="ratio">—</strong>, CRIT ≤ <strong data-rule="parallelism.peak_slot_ratio_critical" data-format="ratio">—</strong></span>
+      </div>
+      <div class="doc-columns">
+        <div>
+          <h3>Метрики</h3>
+          <dl class="metric-defs">
+            <div><dt>Allocated CPU</dt><dd>CPU time задач / доступные executor core-ms. Показывает загрузку всей выделенной CPU-ёмкости.</dd></div>
+            <div><dt>Task-slot utilization</dt><dd>Executor run time задач / доступные task-slot-ms. Низкое значение означает, что slots часто простаивали.</dd></div>
+            <div><dt>Task CPU efficiency</dt><dd>Executor CPU time / executor run time. Отделяет вычисления на CPU от ожиданий, I/O и накладных расходов внутри task.</dd></div>
+            <div><dt>Running / available, avg</dt><dd>Среднее число одновременно работающих tasks / среднее число доступных slots.</dd></div>
+            <div><dt>Running / available, peak</dt><dd>Пиковые running tasks / пиковые slots; основа проверки недостаточного параллелизма.</dd></div>
+          </dl>
+        </div>
+        <div>
+          <h3>Флаги</h3>
+          <dl class="flag-defs">
+            <div><dt>LOW_CPU_EFFICIENCY</dt><dd>Task CPU efficiency не выше границы.</dd></div>
+            <div><dt>RESOURCE_UNDERUTILIZATION</dt><dd>Task-slot utilization не выше границы. CRIT понижается до WARN, если приложение короче <span data-rule="utilization.min_duration_for_critical_ms" data-format="duration">—</span> <em>и</em> потеряно меньше <span data-rule="utilization.wasted_core_seconds_critical" data-format="core-seconds">—</span>.</dd></div>
+            <div><dt>INSUFFICIENT_PARALLELISM</dt><dd>Peak running tasks / peak available slots не выше границы.</dd></div>
+          </dl>
+        </div>
+      </div>
+      <details class="technical"><summary>Формулы и источники Event Log</summary><p><code>executor_cpu_time_ms</code> берётся из Task Metrics Executor CPU Time; <code>executor_run_time_ms</code> — Executor Run Time. Доступная ёмкость интегрируется по executor timeline, поэтому учитывает появление и удаление executors во времени. Wasted core-seconds = max(0, core capacity − CPU time) / 1000.</p></details>
+    </section>
+
+    <section class="diagnostic-doc" id="memory">
+      <header><span class="diagnostic-number">2</span><div><h2>Memory / GC / spill</h2><p>Показывает давление на JVM и случаи, когда рабочие данные не поместились в execution memory.</p></div></header>
+      <div class="rule-band">
+        <b>Активные границы</b>
+        <span>GC: WARN ≥ <strong data-rule="memory.gc_warning_pct" data-format="pct">—</strong>, CRIT ≥ <strong data-rule="memory.gc_critical_pct" data-format="pct">—</strong></span>
+        <span>Spill: WARN ≥ <strong data-rule="memory.spill_warning_bytes" data-format="bytes">—</strong>, CRIT ≥ <strong data-rule="memory.spill_critical_bytes" data-format="bytes">—</strong></span>
+      </div>
+      <div class="doc-columns">
+        <div><h3>Метрики</h3><dl class="metric-defs">
+          <div><dt>GC time / ratio</dt><dd>Суммарное JVM GC Time и его доля от Executor Run Time.</dd></div>
+          <div><dt>Memory spill</dt><dd>Байты, временно вытесненные из execution memory.</dd></div>
+          <div><dt>Disk spill</dt><dd>Байты, фактически записанные на диск; обычно сильнее влияют на время.</dd></div>
+          <div><dt>Tasks with spill</dt><dd>Доля tasks, где memory или disk spill больше нуля.</dd></div>
+          <div><dt>Peak execution memory P95 / MAX</dt><dd>95-й перцентиль и максимум task-level Peak Execution Memory.</dd></div>
+        </dl></div>
+        <div><h3>Флаги</h3><dl class="flag-defs">
+          <div><dt>HIGH_GC</dt><dd>GC ratio достиг warning или critical границы.</dd></div>
+          <div><dt>HEAVY_SPILL</dt><dd>Максимум из Memory Spill и Disk Spill достиг границы.</dd></div>
+        </dl></div>
+      </div>
+      <details class="technical"><summary>Формулы и источники Event Log</summary><p>GC ratio = Σ JVM GC Time / Σ Executor Run Time × 100. Spill и peak execution memory суммируются или распределяются по успешным task attempts; повторные failed attempts не смешиваются с фактическим результатом stage.</p></details>
+    </section>
+
+    <section class="diagnostic-doc" id="skew">
+      <header><span class="diagnostic-number">3</span><div><h2>Data skew / stragglers</h2><p>Ищет stage, где небольшая часть задач заметно дольше или обрабатывает больше данных, чем медианная задача.</p></div></header>
+      <div class="rule-band">
+        <b>Активные границы</b>
+        <span>Анализируется stage с ≥ <strong data-rule="skew.min_tasks" data-format="integer">—</strong> tasks</span>
+        <span>P95 / median: WARN ≥ <strong data-rule="skew.p95_median_warning" data-format="times">—</strong>, CRIT ≥ <strong data-rule="skew.p95_median_critical" data-format="times">—</strong></span>
+        <span>MAX / median: CRIT ≥ <strong data-rule="skew.max_median_critical" data-format="times">—</strong></span>
+      </div>
+      <div class="doc-columns">
+        <div><h3>Метрики</h3><dl class="metric-defs">
+          <div><dt>Duration P95 / median</dt><dd>Насколько медленные 5% tasks отличаются от типичной task.</dd></div>
+          <div><dt>Input P95 / median</dt><dd>Неравномерность входных байтов между tasks.</dd></div>
+          <div><dt>Shuffle P95 / median</dt><dd>Худший из факторов shuffle read и shuffle write.</dd></div>
+          <div><dt>Duration MAX / median</dt><dd>Отношение самой долгой task к медиане.</dd></div>
+          <div><dt>Skewed tasks</dt><dd>Доля tasks дольше median × <span data-rule="skew.skewed_task_multiplier" data-format="times">—</span>.</dd></div>
+          <div><dt>Worst stage</dt><dd>Stage с максимальным duration P95 / median среди пригодных для анализа.</dd></div>
+        </dl></div>
+        <div><h3>Флаги</h3><dl class="flag-defs">
+          <div><dt>DATA_SKEW</dt><dd>Duration нарушает границу и хотя бы один data-volume factor также достигает warning.</dd></div>
+          <div><dt>TASK_STRAGGLERS</dt><dd>Duration нарушает границу, но доступные распределения объёма данных её не подтверждают.</dd></div>
+        </dl></div>
+      </div>
+      <details class="technical"><summary>Формулы и ограничения</summary><p>Все отношения считаются внутри одного stage attempt по successful tasks. Stage с меньшим числом tasks не получает оценку: на малой выборке P95 нестабилен. Если median равна нулю или распределение отсутствует, соответствующий factor не выдумывается и остаётся недоступным.</p></details>
+    </section>
+
+    <section class="diagnostic-doc" id="shuffle">
+      <header><span class="diagnostic-number">4</span><div><h2>Shuffle pressure</h2><p>Показывает цену перераспределения данных между executors и долю времени, потраченную на ожидание remote blocks.</p></div></header>
+      <div class="rule-band">
+        <b>Активные границы</b>
+        <span>Fetch wait: WARN ≥ <strong data-rule="shuffle.fetch_wait_warning_pct" data-format="pct">—</strong>, CRIT ≥ <strong data-rule="shuffle.fetch_wait_critical_pct" data-format="pct">—</strong></span>
+        <span>Shuffle / input: WARN ≥ <strong data-rule="shuffle.io_to_input_warning_ratio" data-format="times">—</strong>, CRIT ≥ <strong data-rule="shuffle.io_to_input_critical_ratio" data-format="times">—</strong></span>
+      </div>
+      <div class="doc-columns">
+        <div><h3>Метрики</h3><dl class="metric-defs">
+          <div><dt>Shuffle read / write</dt><dd>Физически прочитанные и записанные байты shuffle.</dd></div>
+          <div><dt>Total shuffle</dt><dd>Shuffle read + shuffle write.</dd></div>
+          <div><dt>Fetch wait</dt><dd>Время fetch wait и его доля от Executor Run Time.</dd></div>
+          <div><dt>Shuffle / source input</dt><dd>Total shuffle / bytes, прочитанные из исходных источников.</dd></div>
+          <div><dt>Remote read</dt><dd>Remote shuffle bytes / (remote + local shuffle bytes).</dd></div>
+        </dl></div>
+        <div><h3>Флаги</h3><dl class="flag-defs">
+          <div><dt>SHUFFLE_FETCH_WAIT</dt><dd>Доля fetch wait достигла warning или critical границы.</dd></div>
+          <div><dt>HEAVY_SHUFFLE</dt><dd>Отношение total shuffle к source input достигло границы.</dd></div>
+        </dl></div>
+      </div>
+      <details class="technical"><summary>Как интерпретировать</summary><p>Большой объём shuffle сам по себе не всегда проблема: для крупного входа он может быть естественным. Поэтому флаг использует отношение к source input. Fetch wait отдельно показывает сетевое/дисковое ожидание, которое может быть высоким даже при умеренном объёме.</p></details>
+    </section>
+
+    <section class="diagnostic-doc" id="scan">
+      <header><span class="diagnostic-number">5</span><div><h2>Scan / partition pruning</h2><p>Проверяет pruning по прямым evidence physical plan и файловым счётчикам, а не по наличию фильтра в SQL-тексте.</p></div></header>
+      <div class="rule-band">
+        <b>Активная граница</b>
+        <span>Большой scan без pruning: read ≥ <strong data-rule="scan.large_scan_bytes" data-format="bytes">—</strong></span>
+        <span>File pruning % = skipped / (skipped + selected) × 100</span>
+      </div>
+      <div class="doc-columns">
+        <div><h3>Метрики</h3><dl class="metric-defs">
+          <div><dt>Read / Rows</dt><dd>Байты и строки, реально прочитанные scan-оператором.</dd></div>
+          <div><dt>Selected files</dt><dd>Файлы, оставшиеся после выбора source scan.</dd></div>
+          <div><dt>Skipped files</dt><dd>Кандидатные файлы, исключённые source-level pruning.</dd></div>
+          <div><dt>File pruning %</dt><dd>Доля исключённых файлов среди selected + skipped.</dd></div>
+          <div><dt>Filters captured</dt><dd>В physical plan присутствуют partition, pushed или data filters; это evidence, но не самостоятельное доказательство фактического pruning.</dd></div>
+        </dl></div>
+        <div><h3>Флаги и состояния</h3><dl class="flag-defs">
+          <div><dt>NO_PARTITION_PRUNING</dt><dd>Есть partitioned source, но scan выбрал все кандидатные файлы. Статус WARN.</dd></div>
+          <div><dt>LARGE_SCAN_WITHOUT_PARTITION_PRUNING</dt><dd>То же самое, а read достиг активной границы. Статус CRIT.</dd></div>
+          <div><dt>PRUNING_DETECTED</dt><dd>Есть ненулевой счётчик skipped files; карточка может быть OK.</dd></div>
+          <div><dt>UNKNOWN</dt><dd>Не хватает файловых счётчиков для доказательства; итог UNKNOWN, а не WARN.</dd></div>
+          <div><dt>SOURCE_NOT_PARTITIONED</dt><dd>Источник не partitioned; проверка получает N/A.</dd></div>
+        </dl></div>
+      </div>
+      <details class="technical"><summary>Почему фильтр в запросе ещё не означает pruning</summary><p><code>PartitionFilters</code> показывает, что условие дошло до physical plan. Фактический результат подтверждают source file counters: сколько файлов было рассмотрено, выбрано и пропущено. Поэтому карточка различает «фильтр найден», «pruning подтверждён» и «проверить невозможно».</p></details>
+    </section>
+
+    <section class="diagnostic-doc" id="joins">
+      <header><span class="diagnostic-number">6</span><div><h2>Join pathologies</h2><p>Проверяет раздувание строк после join и показывает случаи, где небольшую сторону, возможно, стоило broadcast-ить.</p></div></header>
+      <div class="rule-band">
+        <b>Активные границы</b>
+        <span>Row amplification: WARN ≥ <strong data-rule="join.amplification_warning" data-format="times">—</strong>, CRIT ≥ <strong data-rule="join.amplification_critical" data-format="times">—</strong></span>
+        <span>Broadcast threshold берётся из effective Spark configuration конкретного приложения</span>
+      </div>
+      <div class="doc-columns">
+        <div><h3>Метрики</h3><dl class="metric-defs">
+          <div><dt>Join strategy / type</dt><dd>Например, SortMergeJoin, BroadcastHashJoin и тип inner/left/right.</dd></div>
+          <div><dt>Left / right rows</dt><dd>Выходные строки дочерних операторов, когда SQL metrics позволяют их связать.</dd></div>
+          <div><dt>Output rows</dt><dd>Количество строк после join.</dd></div>
+          <div><dt>Row amplification</dt><dd>Output rows / max(left rows, right rows).</dd></div>
+          <div><dt>Broadcast candidate</dt><dd>Известная сторона меньше effective auto broadcast threshold, но стратегия не broadcast.</dd></div>
+        </dl></div>
+        <div><h3>Флаги</h3><dl class="flag-defs">
+          <div><dt>JOIN_ROW_EXPLOSION</dt><dd>Row amplification достиг warning или critical границы.</dd></div>
+          <div><dt>POTENTIAL_BROADCAST_CANDIDATE</dt><dd>Потенциальная оптимизация со статусом WARN. Это подсказка, а не гарантия, что broadcast безопасен.</dd></div>
+          <div><dt>No joins</dt><dd>Physical plan проверен, join нет — область получает N/A.</dd></div>
+        </dl></div>
+      </div>
+      <details class="technical"><summary>Что показывает Show all joins</summary><p>Каждая строка соответствует join node физического плана и содержит только реально доступные метрики. Пустое значение не заменяется нулём. Stage IDs и SQL execution ID используются для связи с исходными событиями.</p></details>
+    </section>
+
+    <section class="diagnostic-doc" id="sql-operators">
+      <header><span class="diagnostic-number">7</span><div><h2>Expensive SQL operators</h2><p>Собирает тяжёлые Window, Sort, Exchange и операторы, резко увеличивающие число строк.</p></div></header>
+      <div class="rule-band">
+        <b>Активные границы</b>
+        <span>Window input ≥ <strong data-rule="window.heavy_window_rows" data-format="rows">—</strong></span>
+        <span>Sort input ≥ <strong data-rule="sql_operators.heavy_sort_rows" data-format="rows">—</strong></span>
+        <span>SinglePartition shuffle ≥ <strong data-rule="window.heavy_window_shuffle_bytes" data-format="bytes">—</strong></span>
+        <span>Row expansion: WARN ≥ <strong data-rule="sql_operators.row_amplification_warning" data-format="times">—</strong>, CRIT ≥ <strong data-rule="sql_operators.row_amplification_critical" data-format="times">—</strong></span>
+      </div>
+      <div class="doc-columns">
+        <div><h3>Метрики</h3><dl class="metric-defs">
+          <div><dt>Window / Sort / Exchange</dt><dd>Количество соответствующих nodes в physical plan.</dd></div>
+          <div><dt>Largest Window input</dt><dd>Максимальное число строк на входе Window.</dd></div>
+          <div><dt>Window upstream shuffle</dt><dd>Объём ближайшего upstream shuffle перед Window.</dd></div>
+          <div><dt>Largest Sort input</dt><dd>Максимальное число строк, обработанных Sort.</dd></div>
+          <div><dt>Largest Exchange output</dt><dd>Максимальный shuffle output среди Exchange.</dd></div>
+          <div><dt>Max Generate / Expand amplification</dt><dd>Output rows / child output rows для операторов развертывания.</dd></div>
+        </dl></div>
+        <div><h3>Флаги</h3><dl class="flag-defs">
+          <div><dt>HEAVY_WINDOW</dt><dd>Window input достиг границы.</dd></div>
+          <div><dt>HEAVY_WINDOW_AFTER_SHUFFLE</dt><dd>Тяжёлый Window следует за shuffle/sort.</dd></div>
+          <div><dt>HEAVY_SORT</dt><dd>Sort input достиг границы.</dd></div>
+          <div><dt>SINGLE_PARTITION_BOTTLENECK</dt><dd>SinglePartition Exchange записал не меньше заданной границы; статус CRIT.</dd></div>
+          <div><dt>ROW_EXPANSION_OPERATOR</dt><dd>Generate/Expand увеличил поток строк до warning или critical уровня.</dd></div>
+        </dl></div>
+      </div>
+      <details class="technical"><summary>Источники и область применимости</summary><p>Операторы извлекаются из Spark SQL physical plan, значения — из SQL accumulator metrics. Если plan отсутствует, область получает N/A. Счётчик операторов без row/byte metrics остаётся полезным, но не используется для порогового флага.</p></details>
+    </section>
+
+    <footer class="docs-footer">
+      <span>Пороговые значения загружены из <code id="rules-source-footer">—</code>.</span>
+      <a href="/">Вернуться к дашборду →</a>
+    </footer>
+  </main>
+</body>
+</html>
